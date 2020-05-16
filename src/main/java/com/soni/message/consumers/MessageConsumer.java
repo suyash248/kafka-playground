@@ -3,8 +3,10 @@ package com.soni.message.consumers;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 import com.soni.config.Config;
+import com.soni.config.DeliverySemantics;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
@@ -15,22 +17,21 @@ public class MessageConsumer<K, V> {
     private final Logger logger = LoggerFactory.getLogger(MessageConsumer.class);
     private final String topic;
     private final KafkaConsumer<K, V> consumer;
-    private final Map<Integer, ConcurrentLinkedQueue<ConsumerRecord<K,V>>> queueMap;
-    private final ExecutorService[] pools;
+    private final List<ThreadQueue<K,V>> threadQueues;
     private final int numberOfThreads;
+    private final DeliverySemantics deliverySemantics;
 
-    public MessageConsumer(String topic, String groupId, int numberOfThreads) {
+    public MessageConsumer(String topic, String groupId, DeliverySemantics deliverySemantics, int numberOfThreads) {
         Properties prop = createConsumerConfig(groupId);
         this.topic = topic;
+        this.deliverySemantics = deliverySemantics;
         this.consumer = new KafkaConsumer<>(prop);
-        this.queueMap = new HashMap<>();
         this.numberOfThreads = numberOfThreads;
-        this.pools = new ExecutorService[numberOfThreads];
+        this.threadQueues = new ArrayList<>(numberOfThreads);
+        IntStream.range(0, numberOfThreads).forEach(i -> threadQueues.add(i, ThreadQueue.of(
+                Executors.newSingleThreadExecutor(), new ConcurrentLinkedQueue<>()
+        )));
 
-        for (int i = 0; i < pools.length; i++) {
-            pools[i] = Executors.newSingleThreadExecutor();
-            queueMap.put(i, new ConcurrentLinkedQueue<>());
-        }
         this.consumer.subscribe(Collections.singletonList(topic));
     }
 
@@ -46,17 +47,21 @@ public class MessageConsumer<K, V> {
                 if(consumerRecords.count() > 0) logger.info("\nFound " + consumerRecords.count() + " message(s).");
                 for (ConsumerRecord<K, V> consumerRecord : consumerRecords) {
                     int partition = consumerRecord.partition();
-                    int hashIndex = partition % this.numberOfThreads;
-
-                    ConcurrentLinkedQueue<ConsumerRecord<K, V>> queue = queueMap.get(hashIndex);
-                    logger.info("Partition: " + consumerRecord.partition() + " Thread(index: " + hashIndex + ") - queue size: " + queue.size() + " processing " + consumerRecord.value());
-                    queue.add(consumerRecord);
+                    ThreadQueue<K,V> threadQueue = getThreadQueueForPartition(partition);
+                    logger.info("Partition: " + consumerRecord.partition() + " Thread(index: "
+                            + threadQueue.getExecutorService().toString() + ") - queue size: "
+                            + threadQueue.getQueue().size() + " processing " + consumerRecord.value());
+                    threadQueue.getQueue().add(consumerRecord);
                 }
                 List< Future<List<ConsumerRecord<K, V>>>> futureList = handleMessages(messageProcessor);
 
-//                List<Map<TopicPartition, OffsetAndMetadata>> committedOffsets = commitOffsets(futureList);
-                consumer.commitSync();
-                if(consumerRecords.count() > 0) logger.info("Committed offsets for current batch (size=" + consumerRecords.count() + " )");
+                if(deliverySemantics == DeliverySemantics.ATLEAST_ONCE) {
+                    List<Map<TopicPartition, OffsetAndMetadata>> committedOffsets = commitOffsets(futureList);
+                } else if(deliverySemantics == DeliverySemantics.ATMOST_ONCE) {
+                    consumer.commitSync();
+                    if(consumerRecords.count() > 0)
+                        logger.info("Committed offsets for current batch (size=" + consumerRecords.count() + " )");
+                }
             }
         } catch (WakeupException e) {
             // ignore for shutdown
@@ -68,15 +73,15 @@ public class MessageConsumer<K, V> {
 
     private List< Future<List<ConsumerRecord<K, V>>>> handleMessages(MessageProcessor<K, V> messageProcessor) {
         List< Future<List<ConsumerRecord<K, V>>>> futureList = new ArrayList<>();
-        for (int i = 0; i < pools.length; i++) {
-            ConcurrentLinkedQueue<ConsumerRecord<K, V>> queueForCurrThread = queueMap.get(i);
-            if(queueForCurrThread.isEmpty()) {
-                continue;
+
+        threadQueues.forEach(threadQueue -> {
+            ConcurrentLinkedQueue<ConsumerRecord<K, V>> queueForCurrThread = threadQueue.getQueue();
+            if(!queueForCurrThread.isEmpty()) {
+                MessageHandler<K, V> messageHandler = new MessageHandler<>(queueForCurrThread, messageProcessor);
+                Future<List<ConsumerRecord<K, V>>> consumerRecordListFuture = threadQueue.getExecutorService().submit(messageHandler);
+                futureList.add(consumerRecordListFuture);
             }
-            MessageHandler<K, V> messageHandler = new MessageHandler<>(queueForCurrThread, messageProcessor);
-            Future<List<ConsumerRecord<K, V>>> consumerRecordListFuture = pools[i].submit(messageHandler);
-            futureList.add(consumerRecordListFuture);
-        }
+        });
         return futureList;
     }
 
@@ -108,6 +113,11 @@ public class MessageConsumer<K, V> {
             }
         }
         return committedOffsets;
+    }
+
+    private ThreadQueue<K,V> getThreadQueueForPartition(int partition) {
+        int hashIndex = partition % this.numberOfThreads;
+        return threadQueues.get(hashIndex);
     }
 
     private Properties createConsumerConfig(String groupId) {
