@@ -1,7 +1,7 @@
-package com.soni.message.producers.impl;
+package org.github.message.producers.impl;
 
-import com.soni.config.Config;
-import com.soni.message.producers.MessageProducer;
+import org.github.config.Config;
+import org.github.message.producers.MessageProducer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;

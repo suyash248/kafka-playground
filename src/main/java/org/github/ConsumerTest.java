@@ -1,8 +1,8 @@
-package com.soni;
+package org.github;
 
-import com.soni.config.DeliverySemantics;
-import com.soni.message.consumers.MessageConsumer;
-import com.soni.message.consumers.impl.MessageConsumerImpl;
+import org.github.config.DeliverySemantics;
+import org.github.message.consumers.MessageConsumer;
+import org.github.message.consumers.impl.MessageConsumerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class ConsumerTest {

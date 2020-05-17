@@ -1,4 +1,4 @@
-package com.soni.message.consumers.processors;
+package org.github.message.consumers.processors;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;

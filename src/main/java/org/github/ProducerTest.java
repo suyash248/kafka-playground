@@ -1,7 +1,7 @@
-package com.soni;
+package org.github;
 
-import com.soni.message.producers.MessageProducer;
-import com.soni.message.producers.impl.MessageProducerImpl;
+import org.github.message.producers.MessageProducer;
+import org.github.message.producers.impl.MessageProducerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,17 +1,17 @@
-package com.soni.message.consumers.impl;
+package org.github.message.consumers.impl;
 
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
-import com.soni.config.Config;
-import com.soni.config.DeliverySemantics;
-import com.soni.message.consumers.MessageConsumer;
-import com.soni.message.consumers.listeners.RebalanceListener;
-import com.soni.message.consumers.processors.MessageHandler;
-import com.soni.message.consumers.processors.MessageProcessor;
-import com.soni.message.consumers.processors.ThreadQueue;
+import org.github.config.Config;
+import org.github.config.DeliverySemantics;
+import org.github.message.consumers.MessageConsumer;
+import org.github.message.consumers.listeners.RebalanceListener;
+import org.github.message.consumers.processors.MessageHandler;
+import org.github.message.consumers.processors.MessageProcessor;
+import org.github.message.consumers.processors.ThreadQueue;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;

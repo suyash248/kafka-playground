@@ -1,6 +1,6 @@
-package com.soni.message.consumers.listeners;
+package org.github.message.consumers.listeners;
 
-import com.soni.message.consumers.processors.ThreadQueue;
+import org.github.message.consumers.processors.ThreadQueue;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
