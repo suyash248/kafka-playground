@@ -1,6 +1,7 @@
 package com.soni;
 
 import com.soni.message.producers.MessageProducer;
+import com.soni.message.producers.impl.MessageProducerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ public class ProducerTest {
     }
 
     public void produce(String topic) {
-        MessageProducer<Void, String> messageProducer = new MessageProducer<>();
+        MessageProducer<Void, String> messageProducer = new MessageProducerImpl<>();
         for (int i = 0; i < 1000; i++) {
             String message = "Hi " + i + " @ " +  System.currentTimeMillis();
             messageProducer.pushMessage(topic, null, message);

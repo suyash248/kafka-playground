@@ -1,4 +1,4 @@
-package com.soni.message.consumers;
+package com.soni.message.consumers.processors;
 
 import java.util.List;
 

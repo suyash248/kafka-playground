@@ -2,6 +2,7 @@ package com.soni;
 
 import com.soni.config.DeliverySemantics;
 import com.soni.message.consumers.MessageConsumer;
+import com.soni.message.consumers.impl.MessageConsumerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,7 @@ public class ConsumerTest {
     }
 
     public void consume(String topic, String groupId) {
-        MessageConsumer<Void, String> consumer = new MessageConsumer<>(topic, groupId, DeliverySemantics.ATLEAST_ONCE, 4);
+        MessageConsumer<Void, String> consumer = new MessageConsumerImpl<>(topic, groupId, DeliverySemantics.ATLEAST_ONCE, 4);
         Path filePath = Paths.get("/home/suyash/IdeaProjects/kafka-playground/consumed.txt");
         consumer.consume(consumerRecordList -> {
             consumerRecordList.forEach(consumerRecord -> {
