@@ -30,6 +30,9 @@ public class ConsumerTest {
         Path filePath = Paths.get("/home/suyash/IdeaProjects/kafka-playground/consumed.txt");
         consumer.consume(consumerRecordList ->
             consumerRecordList.forEach(consumerRecord -> {
+                if (consumerRecord.value().equals("Hi 50")) {
+                    int i = 20/0;
+                }
                 String content = "Consumed: " + consumerRecord.value() + " Partition: " + consumerRecord.partition() + ", Offset: " + consumerRecord.offset()
                         + ", By ThreadID: " + Thread.currentThread().getId();
                 logger.info(content);
@@ -38,9 +41,6 @@ public class ConsumerTest {
                             StandardOpenOption.APPEND);
                 } catch (IOException e) {
                     logger.error("Error while writing to file", e);
-                }
-                if (consumerRecord.value().equals("Hi 50")) {
-                    int i = 20/0;
                 }
             })
             ,((consumerRecordList, e) -> {
