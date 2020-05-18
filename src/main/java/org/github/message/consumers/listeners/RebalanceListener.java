@@ -1,6 +1,6 @@
 package org.github.message.consumers.listeners;
 
-import org.github.message.consumers.processors.ThreadQueue;
+import org.github.message.consumers.processors.ExecutorServiceQueue;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 public class RebalanceListener<K,V> implements ConsumerRebalanceListener {
     private final Logger logger = LoggerFactory.getLogger(RebalanceListener.class);
 
-    private final ConcurrentMap<Integer, ThreadQueue<ConsumerRecord<K,V>>> partitionThreadQueue;
+    private final ConcurrentMap<Integer, ExecutorServiceQueue<ConsumerRecord<K,V>>> partitionThreadQueue;
     private final int numberOfThreads;
 
-    public RebalanceListener(ConcurrentMap<Integer, ThreadQueue<ConsumerRecord<K,V>>> partitionThreadQueue, int numberOfThreads) {
+    public RebalanceListener(ConcurrentMap<Integer, ExecutorServiceQueue<ConsumerRecord<K,V>>> partitionThreadQueue, int numberOfThreads) {
         this.partitionThreadQueue = partitionThreadQueue;
         this.numberOfThreads = numberOfThreads;
     }
@@ -38,10 +38,10 @@ public class RebalanceListener<K,V> implements ConsumerRebalanceListener {
         logger.info("Before revocation: " + partitionThreadQueue.toString());
         List<Integer> revokedPartitions = revokedTopicPartitions.stream().map(TopicPartition::partition).collect(Collectors.toList());
         logger.info("Partitions revoked: " + revokedPartitions.toString());
-        Set<ThreadQueue<ConsumerRecord<K,V>>> revokeCandidates = new HashSet<>();
+        Set<ExecutorServiceQueue<ConsumerRecord<K,V>>> revokeCandidates = new HashSet<>();
         revokedPartitions.forEach(partition -> revokeCandidates.add(partitionThreadQueue.remove(partition)));
 
-        Set<ThreadQueue<ConsumerRecord<K,V>>> retainedCadidates = new HashSet<>(partitionThreadQueue.values());
+        Set<ExecutorServiceQueue<ConsumerRecord<K,V>>> retainedCadidates = new HashSet<>(partitionThreadQueue.values());
         revokeCandidates.removeAll(retainedCadidates);
 
         revokeCandidates.forEach(revokeTq -> {
@@ -61,10 +61,10 @@ public class RebalanceListener<K,V> implements ConsumerRebalanceListener {
         List<Integer> assignedPartitions = assignedTopicPartitions.stream().map(TopicPartition::partition).collect(Collectors.toList());
         logger.info("Partitions assigned: " + assignedPartitions.toString());
 
-        List<ThreadQueue<ConsumerRecord<K,V>>> distinctThreadQueues = new ArrayList<>(new HashSet<>(partitionThreadQueue.values()));
-        int numDistinctQueues = distinctThreadQueues.size();
+        List<ExecutorServiceQueue<ConsumerRecord<K,V>>> distinctExecutorServiceQueues = new ArrayList<>(new HashSet<>(partitionThreadQueue.values()));
+        int numDistinctQueues = distinctExecutorServiceQueues.size();
         while(numDistinctQueues < numberOfThreads) {
-            distinctThreadQueues.add(ThreadQueue.of(Executors.newSingleThreadExecutor(), new ConcurrentLinkedQueue<>()));
+            distinctExecutorServiceQueues.add(ExecutorServiceQueue.of(Executors.newSingleThreadExecutor(), new ConcurrentLinkedQueue<>()));
             numDistinctQueues++;
         }
 
@@ -73,7 +73,7 @@ public class RebalanceListener<K,V> implements ConsumerRebalanceListener {
             if(partitionThreadQueue.containsKey(assignedPartition)) {
                 continue;
             }
-            partitionThreadQueue.put(assignedPartition, distinctThreadQueues.get(threadIndex));
+            partitionThreadQueue.put(assignedPartition, distinctExecutorServiceQueues.get(threadIndex));
             logger.info("Partition -> ThreadQueueIndex: p-" + assignedPartition + "->" + threadIndex);
             threadIndex = (threadIndex + 1) % numberOfThreads;
         }

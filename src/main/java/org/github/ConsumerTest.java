@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ConsumerTest {
     Logger logger = LoggerFactory.getLogger(ConsumerTest.class);
@@ -26,7 +28,7 @@ public class ConsumerTest {
     public void consume(String topic, String groupId) {
         MessageConsumer<Void, String> consumer = new MessageConsumerImpl<>(topic, groupId, DeliverySemantics.ATLEAST_ONCE, 4);
         Path filePath = Paths.get("/home/suyash/IdeaProjects/kafka-playground/consumed.txt");
-        consumer.consume(consumerRecordList -> {
+        consumer.consume(consumerRecordList ->
             consumerRecordList.forEach(consumerRecord -> {
                 String content = "Consumed: " + consumerRecord.value() + " Partition: " + consumerRecord.partition() + ", Offset: " + consumerRecord.offset()
                         + ", By ThreadID: " + Thread.currentThread().getId();
@@ -37,7 +39,17 @@ public class ConsumerTest {
                 } catch (IOException e) {
                     logger.error("Error while writing to file", e);
                 }
-            });
-        });
+                if (consumerRecord.value().equals("Hi 50")) {
+                    int i = 20/0;
+                }
+            })
+            ,((consumerRecordList, e) -> {
+                List<String> failedConsumerRecords = consumerRecordList.stream().map(consumerRecord ->
+                        consumerRecord.topic() + " " + consumerRecord.value() + " " + consumerRecord.partition()
+                ).collect(Collectors.toList());
+                logger.error("Error while processing a batch(size=" + failedConsumerRecords.size() + "): "
+                        + failedConsumerRecords.toString(), e);
+            })
+        );
     }
 }

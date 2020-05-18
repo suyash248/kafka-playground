@@ -16,8 +16,8 @@ public class ProducerTest {
 
     public void produce(String topic) {
         MessageProducer<Void, String> messageProducer = new MessageProducerImpl<>();
-        for (int i = 0; i < 1000; i++) {
-            String message = "Hi " + i + " @ " +  System.currentTimeMillis();
+        for (int i = 0; i < 200; i++) {
+            String message = "Hi " + i; // + " @ "  +  System.currentTimeMillis();
             messageProducer.pushMessage(topic, null, message);
             try {
                 Thread.sleep(10L);
